@@ -1107,7 +1107,7 @@
                             <div class="buttons-container" id="grade-buttons-${outcome.id}">
                                 ${gradeBands.map(grade => `
                                     <button 
-                                        class="grade-btn ${grade.id} ${performanceLevels[outcome.id].bandId === grade.id ? 'active' : ''}" 
+                                        class="grade-btn ${grade.id} ${performanceLevels[outcome.id]?.bandId === grade.id ? 'active' : ''}" 
                                         data-grade-id="${grade.id}" 
                                         data-outcome-id="${outcome.id}" 
                                         style="background-color: ${grade.color};"
@@ -1122,9 +1122,9 @@
                         <div>
                             <label class="text-sm font-semibold block mb-1" style="font-size: 0.875rem; font-weight: 600; display: block; margin-bottom: 4px;">Select Specific Mark:</label>
                             <div class="percentage-container" id="percentage-buttons-${outcome.id}">
-                                ${gradeBands.find(g => g.id === performanceLevels[outcome.id].bandId).ranges.map(percentage => `
+                                ${(gradeBands.find(g => g.id === performanceLevels[outcome.id]?.bandId)?.ranges || []).map(percentage => `
                                     <button 
-                                        class="percentage-btn ${performanceLevels[outcome.id].percentage === percentage ? 'active' : ''}" 
+                                        class="percentage-btn ${performanceLevels[outcome.id]?.percentage === percentage ? 'active' : ''}" 
                                         data-percentage="${percentage}" 
                                         data-outcome-id="${outcome.id}"
                                     >
@@ -1147,15 +1147,26 @@
             function handleGradeBandChange(event) {
                 const outcomeId = event.target.dataset.outcomeId;
                 const gradeId = event.target.dataset.gradeId;
+                 // Ensure outcomeId is valid before proceeding
+                if (!learningOutcomes.some(o => o.id === outcomeId)) {
+                    console.error(`Invalid outcomeId: ${outcomeId}`);
+                    return;
+                }
                 
                 document.querySelectorAll(`#grade-buttons-${outcomeId} .grade-btn`).forEach(btn => btn.classList.remove('active'));
                 event.target.classList.add('active');
                 
-                const defaultPercentage = gradeBands.find(g => g.id === gradeId).ranges[0];
+                const gradeBand = gradeBands.find(g => g.id === gradeId);
+                 if (!gradeBand) {
+                     console.error(`Invalid gradeId: ${gradeId}`);
+                     return;
+                 }
+                const defaultPercentage = gradeBand.ranges[0];
                 performanceLevels[outcomeId] = { bandId: gradeId, percentage: defaultPercentage };
                 
                 const percentageContainer = document.getElementById(`percentage-buttons-${outcomeId}`);
-                percentageContainer.innerHTML = gradeBands.find(g => g.id === gradeId).ranges.map(percentage => `
+                 if (!percentageContainer) return; // Add check for container existence
+                percentageContainer.innerHTML = gradeBand.ranges.map(percentage => `
                     <button 
                         class="percentage-btn ${performanceLevels[outcomeId].percentage === percentage ? 'active' : ''}" 
                         data-percentage="${percentage}" 
@@ -1173,7 +1184,12 @@
             function handlePercentageChange(event) {
                 const outcomeId = event.target.dataset.outcomeId;
                 const percentage = event.target.dataset.percentage;
-                
+                 // Ensure outcomeId is valid before proceeding
+                if (!learningOutcomes.some(o => o.id === outcomeId)) {
+                    console.error(`Invalid outcomeId: ${outcomeId}`);
+                    return;
+                }
+
                 document.querySelectorAll(`#percentage-buttons-${outcomeId} .percentage-btn`).forEach(btn => btn.classList.remove('active'));
                 event.target.classList.add('active');
                 
@@ -1191,7 +1207,9 @@
                         btn.classList.toggle('active', btn.dataset.gradeId === gradeBandId);
                     });
                     updateAllContent();
-                }
+                } else {
+                     console.warn(`Could not find grade band for percentage: ${percentage}`);
+                 }
             }
             
             // Update all content (remains the same)
@@ -1208,121 +1226,54 @@
                if (!Chart) { 
                     console.error("Chart.js library not loaded.");
                     const chartContainer = document.getElementById('performance-chart-container');
-                    if (chartContainer) {
-                         chartContainer.innerHTML = '<p style="text-align: center; color: red;">Error: Chart library not loaded.</p>';
-                     }
+                    if (chartContainer) { chartContainer.innerHTML = '<p style="text-align: center; color: red;">Error: Chart library not loaded.</p>'; }
                     return;
                 }
                const ctx = performanceChartElement.getContext('2d');
-
                if (performanceChart) { performanceChart.destroy(); }
 
                const dataValues = learningOutcomes.map(outcome => {
-                   const gradeId = performanceLevels[outcome.id]?.bandId; // Safe access
+                   const gradeId = performanceLevels[outcome.id]?.bandId;
                    const gradeIndex = gradeBands.findIndex(g => g.id === gradeId);
                    return gradeIndex !== -1 ? gradeBands.length - 1 - gradeIndex : 0; 
                });
-
                const labels = learningOutcomes.map(outcome => outcome.title.split(':')[0]); 
                const backgroundColors = learningOutcomes.map(outcome => {
-                   const gradeId = performanceLevels[outcome.id]?.bandId; // Safe access
+                   const gradeId = performanceLevels[outcome.id]?.bandId;
                    return gradeBands.find(g => g.id === gradeId)?.color || '#ccc';
                });
 
                performanceChart = new Chart(ctx, {
-                   type: 'radar',
-                   data: {
-                       labels: labels,
-                       datasets: [{
-                           label: 'Performance',
-                           data: dataValues,
-                           fill: true,
-                           backgroundColor: 'rgba(59, 130, 246, 0.3)', 
-                           borderColor: 'rgba(59, 130, 246, 0.8)', 
-                           pointBackgroundColor: backgroundColors, 
-                           pointBorderColor: '#333',
-                           pointHoverBackgroundColor: backgroundColors,
-                           pointHoverBorderColor: '#000',
-                           pointRadius: 6, 
-                           pointHoverRadius: 8
-                       }]
-                   },
-                   options: {
-                       responsive: true,
-                       maintainAspectRatio: true, 
-                       scales: {
-                           r: {
-                               angleLines: { display: true, color: '#ddd' },
-                               grid: { color: '#ddd' },
-                               pointLabels: { font: { size: 11 }, color: '#333' },
-                               suggestedMin: 0,
-                               suggestedMax: gradeBands.length -1, 
-                               ticks: { stepSize: 1, display: false }
-                           }
-                       },
-                       plugins: {
-                            legend: { display: false },
-                           tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        const outcomeIndex = context.dataIndex;
-                                        if (outcomeIndex < 0 || outcomeIndex >= learningOutcomes.length) return ''; 
-                                        const outcomeId = learningOutcomes[outcomeIndex].id;
-                                        const gradeInfo = performanceLevels[outcomeId];
-                                        const grade = gradeBands.find(g => g.id === gradeInfo?.bandId); 
-                                        return grade ? `${grade.title} (${gradeInfo.percentage})` : 'N/A';
-                                    }
-                                }
-                           }
-                       }
-                   }
+                   type: 'radar', data: { labels: labels, datasets: [{ label: 'Performance', data: dataValues, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.3)', borderColor: 'rgba(59, 130, 246, 0.8)', pointBackgroundColor: backgroundColors, pointBorderColor: '#333', pointHoverBackgroundColor: backgroundColors, pointHoverBorderColor: '#000', pointRadius: 6, pointHoverRadius: 8 }] },
+                   options: { responsive: true, maintainAspectRatio: true, scales: { r: { angleLines: { display: true, color: '#ddd' }, grid: { color: '#ddd' }, pointLabels: { font: { size: 11 }, color: '#333' }, suggestedMin: 0, suggestedMax: gradeBands.length -1, ticks: { stepSize: 1, display: false } } },
+                       plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) {
+                           const outcomeIndex = context.dataIndex; if (outcomeIndex < 0 || outcomeIndex >= learningOutcomes.length) return ''; const outcomeId = learningOutcomes[outcomeIndex].id; const gradeInfo = performanceLevels[outcomeId]; const grade = gradeBands.find(g => g.id === gradeInfo?.bandId); return grade ? `${grade.title} (${gradeInfo.percentage})` : 'N/A'; } } } } }
                });
            }
             
             // Calculate and update average grade (remains the same)
             function updateAverageGrade() {
-                 const percentages = Object.values(performanceLevels).map(level =>
-                    level && typeof level.percentage === 'string' ? parseFloat(level.percentage.replace('%', '')) : NaN // Add check for level and percentage
-                 );
+                 const percentages = Object.values(performanceLevels).map(level => level && typeof level.percentage === 'string' ? parseFloat(level.percentage.replace('%', '')) : NaN);
                  const validPercentages = percentages.filter(p => !isNaN(p));
-                 if (validPercentages.length === 0) {
-                     gradeDisplay.style.backgroundColor = '#ccc';
-                     letterGrade.textContent = '?';
-                     gradeTitle.textContent = 'N/A';
-                     numericGrade.textContent = '--%';
-                     return;
-                 }
+                 if (validPercentages.length === 0) { gradeDisplay.style.backgroundColor = '#ccc'; letterGrade.textContent = '?'; gradeTitle.textContent = 'N/A'; numericGrade.textContent = '--%'; return; }
                  const average = validPercentages.reduce((sum, val) => sum + val, 0) / validPercentages.length;
                  let roundedAverage;
-                 const allSteps = gradeBands.flatMap(band => band.ranges.map(r => parseFloat(r.replace('%',''))));
-                 allSteps.sort((a, b) => a - b);
+                 const allSteps = gradeBands.flatMap(band => band.ranges.map(r => parseFloat(r.replace('%','')))).sort((a, b) => a - b);
                  const minStep = allSteps[0], maxStep = allSteps[allSteps.length - 1];
                  const clampedAverage = Math.max(minStep, Math.min(average, maxStep));
                  roundedAverage = allSteps.reduce((prev, curr) => (Math.abs(curr - clampedAverage) < Math.abs(prev - clampedAverage) ? curr : prev));
-                  if (!allSteps.includes(roundedAverage)) { // Fallback
-                      roundedAverage = allSteps.reduce((prev, curr) => 
-                           Math.abs(curr - clampedAverage) < Math.abs(prev - clampedAverage) ? curr : prev
-                      );
-                  }
+                 if (!allSteps.includes(roundedAverage)) { roundedAverage = allSteps.reduce((prev, curr) => Math.abs(curr - clampedAverage) < Math.abs(prev - clampedAverage) ? curr : prev); }
                  let gradeBand = null;
                  for (const band of gradeBands) {
-                     const rangeNums = band.ranges.map(r => parseFloat(r.replace('%', '')));
-                     const minRange = Math.min(...rangeNums), maxRange = Math.max(...rangeNums), epsilon = 0.01;
-                     if (roundedAverage >= minRange - epsilon && roundedAverage <= maxRange + epsilon) {
-                         gradeBand = band; break;
-                     }
+                     const rangeNums = band.ranges.map(r => parseFloat(r.replace('%', ''))), minRange = Math.min(...rangeNums), maxRange = Math.max(...rangeNums), epsilon = 0.01;
+                     if (roundedAverage >= minRange - epsilon && roundedAverage <= maxRange + epsilon) { gradeBand = band; break; }
                  }
                  if (!gradeBand) { gradeBand = gradeBands[gradeBands.length - 1]; console.warn("Could not determine grade band for average:", roundedAverage); }
-
-                if (gradeBand) {
-                    gradeDisplay.className = ''; 
-                    gradeDisplay.classList.add('flex', 'items-center', 'justify-center', 'gap-4', 'p-4', 'rounded-md', gradeBand.id); 
-                    gradeDisplay.style.cssText = `
-                        background-color: ${gradeBand.color}; display: flex; align-items: center; justify-content: center; gap: 16px; padding: 16px; border-radius: 2px;`; 
-                    letterGrade.textContent = gradeBand.letterGrade;
-                    gradeTitle.textContent = gradeBand.title;
-                    numericGrade.textContent = `${roundedAverage}%`;
-                }
+                 if (gradeBand) {
+                    gradeDisplay.className = `flex items-center justify-center gap-4 p-4 rounded-md ${gradeBand.id}`; 
+                    gradeDisplay.style.cssText = `background-color: ${gradeBand.color}; display: flex; align-items: center; justify-content: center; gap: 16px; padding: 16px; border-radius: 2px;`; 
+                    letterGrade.textContent = gradeBand.letterGrade; gradeTitle.textContent = gradeBand.title; numericGrade.textContent = `${roundedAverage}%`;
+                 }
             } 
             
             // Update key improvements (remains the same)
@@ -1349,32 +1300,20 @@
                     if (gradeInfo && gradeInfo.bandId) {
                         const grade = gradeBands.find(g => g.id === gradeInfo.bandId);
                         const feedback = outcome.feedback[gradeInfo.bandId];
-                        
                         const card = document.createElement('div');
                         card.className = 'feedback-card'; 
-                       
                         card.innerHTML = `
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
                                 <h3 style="font-weight: bold; margin: 0; padding-right: 10px;">${outcome.title}</h3> 
                                 <div style="display: flex; flex-direction: column; align-items: flex-end; white-space: nowrap;"> 
-                                    <span 
-                                        style="padding: 4px 8px; border-radius: 2px; font-size: 0.875rem; font-weight: bold; margin-bottom: 4px; background-color: ${grade?.color || '#ccc'}; color: #333;"
-                                    >
-                                        ${grade?.title || 'N/A'}
-                                    </span>
+                                    <span style="padding: 4px 8px; border-radius: 2px; font-size: 0.875rem; font-weight: bold; margin-bottom: 4px; background-color: ${grade?.color || '#ccc'}; color: #333;">${grade?.title || 'N/A'}</span>
                                     <span style="font-size: 0.875rem; font-weight: bold;">${gradeInfo?.percentage || 'N/A'}</span>
                                 </div>
                             </div>
                             <div style="font-size: 0.875rem;">
-                                <div style="margin-bottom: 8px;">
-                                    <strong class="section-title">Strengths Evidenced in Your Work:</strong><br>${feedback?.strength || 'N/A'}
-                                </div>
-                                <div style="margin-bottom: 8px;">
-                                    <strong class="section-title">Areas for Reflection and Practice:</strong><br>${feedback?.evidence || 'N/A'}
-                                </div>
-                                <div>
-                                    <strong class="section-title">Summary:</strong><br>${feedback?.improvement || 'N/A'}
-                                </div>
+                                <div style="margin-bottom: 8px;"><strong class="section-title">Strengths Evidenced in Your Work:</strong><br>${feedback?.strength || 'N/A'}</div>
+                                <div style="margin-bottom: 8px;"><strong class="section-title">Areas for Reflection and Practice:</strong><br>${feedback?.evidence || 'N/A'}</div>
+                                <div><strong class="section-title">Summary:</strong><br>${feedback?.improvement || 'N/A'}</div>
                             </div>`;
                         detailedFeedback.appendChild(card);
                     }
@@ -1383,86 +1322,48 @@
             
             // Update overall advice (remains the same)
             function updateOverallAdvice() {
-                 const percentages = Object.values(performanceLevels).map(level =>
-                    level && typeof level.percentage === 'string' ? parseFloat(level.percentage.replace('%', '')) : NaN // Add check
-                 );
-                  const validPercentages = percentages.filter(p => !isNaN(p));
-                  if (validPercentages.length === 0) {
-                      overallAdvice.innerHTML = '<li>Cannot determine advice level.</li>'; return;
-                  }
+                 const percentages = Object.values(performanceLevels).map(level => level && typeof level.percentage === 'string' ? parseFloat(level.percentage.replace('%', '')) : NaN);
+                 const validPercentages = percentages.filter(p => !isNaN(p));
+                 if (validPercentages.length === 0) { overallAdvice.innerHTML = '<li>Cannot determine advice level.</li>'; return; }
                  const average = validPercentages.reduce((sum, val) => sum + val, 0) / validPercentages.length;
                  let gradeBandId = 'fail'; // Default
                  for (let i = 0; i < gradeBands.length; i++) {
-                     const band = gradeBands[i];
-                     const rangeNums = band.ranges.map(r => parseFloat(r.replace('%', '')));
-                     const minRange = Math.min(...rangeNums);
+                     const band = gradeBands[i], rangeNums = band.ranges.map(r => parseFloat(r.replace('%', ''))), minRange = Math.min(...rangeNums);
                      if (average >= minRange) { gradeBandId = band.id; break; }
                  }
-                  if (average === 100) { gradeBandId = 'first-plus'; }
-                
-                if (gradeBandId && overallImprovements[gradeBandId]) {
+                 if (average === 100) { gradeBandId = 'first-plus'; }
+                 if (gradeBandId && overallImprovements[gradeBandId]) {
                     overallAdvice.innerHTML = '';
-                    overallImprovements[gradeBandId].forEach(advice => {
-                        const li = document.createElement('li');
-                        li.textContent = advice;
-                        overallAdvice.appendChild(li);
-                    });
-                } else {
-                     overallAdvice.innerHTML = '<li>Could not determine overall advice level.</li>'; 
-                     console.warn("Could not find overall advice for grade band ID:", gradeBandId, "Average:", average);
-                 }
+                    overallImprovements[gradeBandId].forEach(advice => { const li = document.createElement('li'); li.textContent = advice; overallAdvice.appendChild(li); });
+                 } else { overallAdvice.innerHTML = '<li>Could not determine overall advice level.</li>'; console.warn("Could not find overall advice for grade band ID:", gradeBandId, "Average:", average); }
             }
             
             // Save the current profile (remains the same)
             function saveProfile() {
-                const now = new Date();
-                const dateString = now.toISOString().slice(0, 10);
-                const timeString = now.toTimeString().slice(0, 5);
-                
-                 const percentages = Object.values(performanceLevels).map(level =>
-                    level && typeof level.percentage === 'string' ? parseFloat(level.percentage.replace('%', '')) : NaN // Add check
-                 );
-                 const validPercentages = percentages.filter(p => !isNaN(p));
-                 if (validPercentages.length === 0) { alert("Cannot save profile with invalid performance levels."); return; }
-                 const average = validPercentages.reduce((sum, val) => sum + val, 0) / validPercentages.length;
-                 let roundedAverage;
-                 const allSteps = gradeBands.flatMap(band => band.ranges.map(r => parseFloat(r.replace('%',''))));
-                 allSteps.sort((a, b) => a - b);
-                 const minStep = allSteps[0], maxStep = allSteps[allSteps.length - 1];
-                 const clampedAverage = Math.max(minStep, Math.min(average, maxStep));
-                 roundedAverage = allSteps.reduce((prev, curr) => (Math.abs(curr - clampedAverage) < Math.abs(prev - clampedAverage) ? curr : prev));
-                 if (!allSteps.includes(roundedAverage)) { roundedAverage = allSteps.reduce((prev, curr) => Math.abs(curr - clampedAverage) < Math.abs(prev - clampedAverage) ? curr : prev); }
-                 let gradeBandId = null, gradeBandTitle = '', letterGrade = '';
-                 for (const band of gradeBands) {
-                     const rangeNums = band.ranges.map(r => parseFloat(r.replace('%', '')));
-                     const minRange = Math.min(...rangeNums), maxRange = Math.max(...rangeNums), epsilon = 0.01;
-                     if (roundedAverage >= minRange - epsilon && roundedAverage <= maxRange + epsilon) {
-                         gradeBandId = band.id; gradeBandTitle = band.title; letterGrade = band.letterGrade; break;
-                     }
-                 }
-                 if (!gradeBandId) { gradeBandId = gradeBands[gradeBands.length - 1].id; gradeBandTitle = gradeBands[gradeBands.length - 1].title; letterGrade = gradeBands[gradeBands.length - 1].letterGrade; }
-
-                const profile = {
-                    id: `profile-${Date.now()}`, date: `${dateString} ${timeString}`,
-                    performanceLevels: JSON.parse(JSON.stringify(performanceLevels)), 
-                    averageGrade: { bandId: gradeBandId, bandTitle: gradeBandTitle, numericValue: roundedAverage, letterGrade: letterGrade }
-                };
-                
-                let existingProfiles = [];
-                try {
-                    const storedProfiles = localStorage.getItem('fn4004-assessment-profiles');
-                    if (storedProfiles) { existingProfiles = JSON.parse(storedProfiles); if (!Array.isArray(existingProfiles)) { existingProfiles = []; } }
-                } catch (error) {
-                    console.error('Error loading saved profiles:', error); existingProfiles = []; localStorage.removeItem('fn4004-assessment-profiles'); 
+                const now = new Date(), dateString = now.toISOString().slice(0, 10), timeString = now.toTimeString().slice(0, 5);
+                const percentages = Object.values(performanceLevels).map(level => level && typeof level.percentage === 'string' ? parseFloat(level.percentage.replace('%', '')) : NaN);
+                const validPercentages = percentages.filter(p => !isNaN(p));
+                if (validPercentages.length === 0) { alert("Cannot save profile with invalid performance levels."); return; }
+                const average = validPercentages.reduce((sum, val) => sum + val, 0) / validPercentages.length;
+                let roundedAverage;
+                const allSteps = gradeBands.flatMap(band => band.ranges.map(r => parseFloat(r.replace('%','')))).sort((a, b) => a - b);
+                const minStep = allSteps[0], maxStep = allSteps[allSteps.length - 1], clampedAverage = Math.max(minStep, Math.min(average, maxStep));
+                roundedAverage = allSteps.reduce((prev, curr) => (Math.abs(curr - clampedAverage) < Math.abs(prev - clampedAverage) ? curr : prev));
+                if (!allSteps.includes(roundedAverage)) { roundedAverage = allSteps.reduce((prev, curr) => Math.abs(curr - clampedAverage) < Math.abs(prev - clampedAverage) ? curr : prev); }
+                let gradeBandId = null, gradeBandTitle = '', letterGrade = '';
+                for (const band of gradeBands) {
+                    const rangeNums = band.ranges.map(r => parseFloat(r.replace('%', ''))), minRange = Math.min(...rangeNums), maxRange = Math.max(...rangeNums), epsilon = 0.01;
+                    if (roundedAverage >= minRange - epsilon && roundedAverage <= maxRange + epsilon) { gradeBandId = band.id; gradeBandTitle = band.title; letterGrade = band.letterGrade; break; }
                 }
-                
+                if (!gradeBandId) { gradeBandId = gradeBands[gradeBands.length - 1].id; gradeBandTitle = gradeBands[gradeBands.length - 1].title; letterGrade = gradeBands[gradeBands.length - 1].letterGrade; }
+                const profile = { id: `profile-${Date.now()}`, date: `${dateString} ${timeString}`, performanceLevels: JSON.parse(JSON.stringify(performanceLevels)), averageGrade: { bandId: gradeBandId, bandTitle: gradeBandTitle, numericValue: roundedAverage, letterGrade: letterGrade } };
+                let existingProfiles = [];
+                try { const storedProfiles = localStorage.getItem('fn4004-assessment-profiles'); if (storedProfiles) { existingProfiles = JSON.parse(storedProfiles); if (!Array.isArray(existingProfiles)) { existingProfiles = []; } } } 
+                catch (error) { console.error('Error loading saved profiles:', error); existingProfiles = []; localStorage.removeItem('fn4004-assessment-profiles'); }
                 const updatedProfiles = [profile, ...existingProfiles].slice(0, 10); 
                 try { localStorage.setItem('fn4004-assessment-profiles', JSON.stringify(updatedProfiles)); } 
                 catch (storageError) { console.error("Error saving profile:", storageError); alert("Could not save profile."); return; }
-                
-                successMessage.style.display = 'block';
-                setTimeout(() => { successMessage.style.display = 'none'; }, 3000);
-                
+                successMessage.style.display = 'block'; setTimeout(() => { successMessage.style.display = 'none'; }, 3000);
                 compareProfilesBtn.disabled = false; compareProfilesBtn.style.opacity = '1';
             }
             
@@ -1470,147 +1371,59 @@
             function checkSavedProfiles() {
                 try {
                     const storedProfiles = localStorage.getItem('fn4004-assessment-profiles');
-                    if (storedProfiles) {
-                        const profiles = JSON.parse(storedProfiles);
-                        if (Array.isArray(profiles) && profiles.length > 0) { compareProfilesBtn.disabled = false; compareProfilesBtn.style.opacity = '1'; } 
-                        else { compareProfilesBtn.disabled = true; compareProfilesBtn.style.opacity = '0.5'; }
-                    } else { compareProfilesBtn.disabled = true; compareProfilesBtn.style.opacity = '0.5'; }
+                    if (storedProfiles) { const profiles = JSON.parse(storedProfiles); if (Array.isArray(profiles) && profiles.length > 0) { compareProfilesBtn.disabled = false; compareProfilesBtn.style.opacity = '1'; } else { compareProfilesBtn.disabled = true; compareProfilesBtn.style.opacity = '0.5'; } } 
+                    else { compareProfilesBtn.disabled = true; compareProfilesBtn.style.opacity = '0.5'; }
                 } catch (error) { console.error('Error checking saved profiles:', error); compareProfilesBtn.disabled = true; compareProfilesBtn.style.opacity = '0.5'; }
             }
             
             // Update compare modal (remains the same)
             function updateCompareModal() {
-                const hasProfilesDiv = document.getElementById('has-profiles');
-                const noProfilesDiv = document.getElementById('no-profiles');
-                const progressTable = document.getElementById('progress-table');
-                const improvementList = document.getElementById('improvement-list');
-                const previousDate = document.getElementById('previous-date');
-                
+                const hasProfilesDiv = document.getElementById('has-profiles'), noProfilesDiv = document.getElementById('no-profiles'), progressTable = document.getElementById('progress-table'), improvementList = document.getElementById('improvement-list'), previousDate = document.getElementById('previous-date');
                 try {
-                    const storedProfiles = localStorage.getItem('fn4004-assessment-profiles');
-                    let profiles = [];
-                    if (storedProfiles) { profiles = JSON.parse(storedProfiles); if (!Array.isArray(profiles)) { profiles = []; } }
-
+                    const storedProfiles = localStorage.getItem('fn4004-assessment-profiles'); let profiles = []; if (storedProfiles) { profiles = JSON.parse(storedProfiles); if (!Array.isArray(profiles)) { profiles = []; } }
                     if (profiles.length > 0) {
-                            hasProfilesDiv.style.display = 'block'; noProfilesDiv.style.display = 'none';
-                            
-                            // Calculate current average 
-                             const percentages = Object.values(performanceLevels).map(level => level && typeof level.percentage === 'string' ? parseFloat(level.percentage.replace('%', '')) : NaN);
-                             const validPercentages = percentages.filter(p => !isNaN(p));
-                             if (validPercentages.length === 0) { /* Handle error */ return; }
-                             const average = validPercentages.reduce((sum, val) => sum + val, 0) / validPercentages.length;
-                             let roundedAverage;
-                             const allSteps = gradeBands.flatMap(band => band.ranges.map(r => parseFloat(r.replace('%',''))));
-                             allSteps.sort((a, b) => a - b);
-                             const minStep = allSteps[0], maxStep = allSteps[allSteps.length - 1];
-                             const clampedAverage = Math.max(minStep, Math.min(average, maxStep));
-                             roundedAverage = allSteps.reduce((prev, curr) => (Math.abs(curr - clampedAverage) < Math.abs(prev - clampedAverage) ? curr : prev));
-                             if (!allSteps.includes(roundedAverage)) { roundedAverage = allSteps.reduce((prev, curr) => Math.abs(curr - clampedAverage) < Math.abs(prev - clampedAverage) ? curr : prev); }
-                             let letterGrade = '';
-                             for (const band of gradeBands) {
-                                 const rangeNums = band.ranges.map(r => parseFloat(r.replace('%', '')));
-                                 const minRange = Math.min(...rangeNums), maxRange = Math.max(...rangeNums), epsilon = 0.01;
-                                 if (roundedAverage >= minRange - epsilon && roundedAverage <= maxRange + epsilon) { letterGrade = band.letterGrade; break; }
-                             }
-                             if (!letterGrade) { letterGrade = gradeBands[gradeBands.length - 1].letterGrade; }
-
-                            let tableHtml = `
-                                <thead><tr><th>Date</th><th>Average Grade</th>
-                                ${learningOutcomes.map(o => `<th>${o.title.split(':')[0]}</th>`).join('')}</tr></thead>
-                                <tbody><tr><td style="font-weight: bold;">Current</td><td style="font-weight: bold; text-align: center;">
-                                ${roundedAverage}% (${letterGrade})</td>`;
-                            
-                            for (const outcome of learningOutcomes) {
-                                const grade = gradeBands.find(g => g.id === performanceLevels[outcome.id]?.bandId); 
-                                tableHtml += `<td style="text-align: center; background-color: ${grade?.color || '#ccc'};">${performanceLevels[outcome.id]?.percentage || 'N/A'}</td>`; 
-                            }
-                            tableHtml += `</tr>`;
-                            
-                            profiles.forEach(profile => {
-                                tableHtml += `<tr><td>${profile.date || 'N/A'}</td><td style="text-align: center;">
-                                ${profile.averageGrade?.numericValue !== undefined ? profile.averageGrade.numericValue + '%' : 'N/A'} (${profile.averageGrade?.letterGrade || 'N/A'})</td>`;
-                                for (const outcome of learningOutcomes) {
-                                    const levelInfo = profile.performanceLevels && profile.performanceLevels[outcome.id]; 
-                                    if (levelInfo && levelInfo.bandId) {
-                                        const grade = gradeBands.find(g => g.id === levelInfo.bandId);
-                                        tableHtml += `<td style="text-align: center; background-color: ${grade?.color || '#ccc'};">${levelInfo.percentage || 'N/A'}</td>`;
-                                    } else { tableHtml += `<td>N/A</td>`; }
-                                }
-                                tableHtml += `</tr>`;
-                            });
-                            tableHtml += `</tbody>`;
-                            progressTable.innerHTML = tableHtml;
-                            
-                            if (profiles.length > 0) {
-                                const mostRecentProfile = profiles[0];
-                                previousDate.textContent = `Compared to previous assessment (${mostRecentProfile.date || 'N/A'}):`;
-                                improvementList.innerHTML = '';
-                                
-                                learningOutcomes.forEach(outcome => {
-                                    const currentPerc = performanceLevels[outcome.id] && typeof performanceLevels[outcome.id].percentage === 'string' ? parseFloat(performanceLevels[outcome.id].percentage.replace('%', '')) : NaN;
-                                    const previousLevelInfo = mostRecentProfile.performanceLevels && mostRecentProfile.performanceLevels[outcome.id];
-                                    const previousPerc = previousLevelInfo && typeof previousLevelInfo.percentage === 'string' ? parseFloat(previousLevelInfo.percentage.replace('%', '')) : NaN;
-                                    let changeText = 'N/A', changeClass = 'improvement-neutral';
-                                    if (!isNaN(currentPerc) && !isNaN(previousPerc)) {
-                                         const difference = currentPerc - previousPerc;
-                                         if (difference > 0) { changeText = `improved by ${difference.toFixed(0)}%`; changeClass = 'improvement-positive'; } 
-                                         else if (difference < 0) { changeText = `decreased by ${Math.abs(difference).toFixed(0)}%`; changeClass = 'improvement-negative'; } 
-                                         else { changeText = 'unchanged'; changeClass = 'improvement-neutral'; }
-                                     } else if (isNaN(previousPerc) && !isNaN(currentPerc)) { changeText = 'newly assessed'; changeClass = 'improvement-neutral'; }
-                                    const li = document.createElement('li');
-                                    li.innerHTML = `<span style="font-weight: 600;">${outcome.title.split(':')[0]}:</span> <span class="${changeClass}">${changeText}</span>`;
-                                    improvementList.appendChild(li);
-                                });
-                                
-                                const currentAvg = roundedAverage; 
-                                const previousAvg = mostRecentProfile.averageGrade?.numericValue; 
-                                let changeText = 'N/A', changeClass = 'improvement-neutral';
-                                 if (previousAvg !== undefined && !isNaN(currentAvg) && !isNaN(previousAvg)) {
-                                     const difference = currentAvg - previousAvg;
-                                     if (difference > 0) { changeText = `improved by ${difference.toFixed(0)}%`; changeClass = 'improvement-positive'; } 
-                                     else if (difference < 0) { changeText = `decreased by ${Math.abs(difference).toFixed(0)}%`; changeClass = 'improvement-negative'; } 
-                                     else { changeText = 'unchanged'; changeClass = 'improvement-neutral'; }
-                                 } else if (previousAvg === undefined) { changeText = 'no previous average'; changeClass = 'improvement-neutral'; }
-                                const li = document.createElement('li');
-                                li.className = 'font-semibold mt-2'; li.style.fontWeight = '600'; li.style.marginTop = '8px';
-                                li.innerHTML = `<span>Overall grade:</span> <span class="${changeClass}">${changeText}</span>`;
-                                improvementList.appendChild(li);
-                            } else { previousDate.textContent = 'No previous assessment to compare.'; improvementList.innerHTML = ''; }
-                        } else { hasProfilesDiv.style.display = 'none'; noProfilesDiv.style.display = 'block'; }
-                } catch (error) {
-                    console.error('Error updating compare modal:', error);
-                    hasProfilesDiv.style.display = 'none'; noProfilesDiv.style.display = 'block';
-                    noProfilesDiv.innerHTML = '<p>Error loading comparison data.</p>';
-                }
+                        hasProfilesDiv.style.display = 'block'; noProfilesDiv.style.display = 'none';
+                        const percentages = Object.values(performanceLevels).map(level => level && typeof level.percentage === 'string' ? parseFloat(level.percentage.replace('%', '')) : NaN); const validPercentages = percentages.filter(p => !isNaN(p)); if (validPercentages.length === 0) { return; } const average = validPercentages.reduce((sum, val) => sum + val, 0) / validPercentages.length;
+                        let roundedAverage; const allSteps = gradeBands.flatMap(band => band.ranges.map(r => parseFloat(r.replace('%','')))).sort((a, b) => a - b); const minStep = allSteps[0], maxStep = allSteps[allSteps.length - 1]; const clampedAverage = Math.max(minStep, Math.min(average, maxStep)); roundedAverage = allSteps.reduce((prev, curr) => (Math.abs(curr - clampedAverage) < Math.abs(prev - clampedAverage) ? curr : prev)); if (!allSteps.includes(roundedAverage)) { roundedAverage = allSteps.reduce((prev, curr) => Math.abs(curr - clampedAverage) < Math.abs(prev - clampedAverage) ? curr : prev); } let letterGrade = '';
+                        for (const band of gradeBands) { const rangeNums = band.ranges.map(r => parseFloat(r.replace('%', ''))), minRange = Math.min(...rangeNums), maxRange = Math.max(...rangeNums), epsilon = 0.01; if (roundedAverage >= minRange - epsilon && roundedAverage <= maxRange + epsilon) { letterGrade = band.letterGrade; break; } } if (!letterGrade) { letterGrade = gradeBands[gradeBands.length - 1].letterGrade; }
+                        let tableHtml = `<thead><tr><th>Date</th><th>Avg Grade</th>${learningOutcomes.map(o => `<th>${o.title.split(':')[0]}</th>`).join('')}</tr></thead><tbody><tr><td style="font-weight: bold;">Current</td><td style="font-weight: bold;">${roundedAverage}% (${letterGrade})</td>`;
+                        for (const outcome of learningOutcomes) { const grade = gradeBands.find(g => g.id === performanceLevels[outcome.id]?.bandId); tableHtml += `<td style="background-color: ${grade?.color || '#ccc'};">${performanceLevels[outcome.id]?.percentage || 'N/A'}</td>`; } tableHtml += `</tr>`;
+                        profiles.forEach(profile => { tableHtml += `<tr><td>${profile.date || 'N/A'}</td><td>${profile.averageGrade?.numericValue !== undefined ? profile.averageGrade.numericValue + '%' : 'N/A'} (${profile.averageGrade?.letterGrade || 'N/A'})</td>`; for (const outcome of learningOutcomes) { const levelInfo = profile.performanceLevels && profile.performanceLevels[outcome.id]; if (levelInfo && levelInfo.bandId) { const grade = gradeBands.find(g => g.id === levelInfo.bandId); tableHtml += `<td style="background-color: ${grade?.color || '#ccc'};">${levelInfo.percentage || 'N/A'}</td>`; } else { tableHtml += `<td>N/A</td>`; } } tableHtml += `</tr>`; }); tableHtml += `</tbody>`; progressTable.innerHTML = tableHtml;
+                        if (profiles.length > 0) {
+                            const mostRecentProfile = profiles[0]; previousDate.textContent = `Compared to previous assessment (${mostRecentProfile.date || 'N/A'}):`; improvementList.innerHTML = '';
+                            learningOutcomes.forEach(outcome => { const currentPerc = performanceLevels[outcome.id] && typeof performanceLevels[outcome.id].percentage === 'string' ? parseFloat(performanceLevels[outcome.id].percentage.replace('%', '')) : NaN; const previousLevelInfo = mostRecentProfile.performanceLevels && mostRecentProfile.performanceLevels[outcome.id]; const previousPerc = previousLevelInfo && typeof previousLevelInfo.percentage === 'string' ? parseFloat(previousLevelInfo.percentage.replace('%', '')) : NaN; let changeText = 'N/A', changeClass = 'improvement-neutral'; if (!isNaN(currentPerc) && !isNaN(previousPerc)) { const diff = currentPerc - previousPerc; if (diff > 0) { changeText = `improved by ${diff.toFixed(0)}%`; changeClass = 'improvement-positive'; } else if (diff < 0) { changeText = `decreased by ${Math.abs(diff).toFixed(0)}%`; changeClass = 'improvement-negative'; } else { changeText = 'unchanged'; } } else if (isNaN(previousPerc) && !isNaN(currentPerc)) { changeText = 'newly assessed'; } const li = document.createElement('li'); li.innerHTML = `<span style="font-weight: 600;">${outcome.title.split(':')[0]}:</span> <span class="${changeClass}">${changeText}</span>`; improvementList.appendChild(li); });
+                            const currentAvg = roundedAverage, previousAvg = mostRecentProfile.averageGrade?.numericValue; let changeText = 'N/A', changeClass = 'improvement-neutral'; if (previousAvg !== undefined && !isNaN(currentAvg) && !isNaN(previousAvg)) { const diff = currentAvg - previousAvg; if (diff > 0) { changeText = `improved by ${diff.toFixed(0)}%`; changeClass = 'improvement-positive'; } else if (diff < 0) { changeText = `decreased by ${Math.abs(diff).toFixed(0)}%`; changeClass = 'improvement-negative'; } else { changeText = 'unchanged'; } } else if (previousAvg === undefined) { changeText = 'no previous average'; } const li = document.createElement('li'); li.className = 'font-semibold mt-2'; li.style.cssText = 'font-weight: 600; margin-top: 8px;'; li.innerHTML = `<span>Overall grade:</span> <span class="${changeClass}">${changeText}</span>`; improvementList.appendChild(li);
+                        } else { previousDate.textContent = 'No previous assessment to compare.'; improvementList.innerHTML = ''; }
+                    } else { hasProfilesDiv.style.display = 'none'; noProfilesDiv.style.display = 'block'; }
+                } catch (error) { console.error('Error updating compare modal:', error); hasProfilesDiv.style.display = 'none'; noProfilesDiv.style.display = 'block'; noProfilesDiv.innerHTML = '<p>Error loading comparison data.</p>'; }
             }
             
-            // Print assessment summary - CORRECTED TEMPLATE LITERALS
+             // Print assessment summary (Final clean version)
             function printSummary() {
                 const printWindow = window.open('', '_blank');
                 if (!printWindow) { alert('Please allow pop-ups to print the assessment summary.'); return; }
-                
-                 const percentages = Object.values(performanceLevels).map(level => level && typeof level.percentage === 'string' ? parseFloat(level.percentage.replace('%', '')) : NaN);
-                 const validPercentages = percentages.filter(p => !isNaN(p));
-                 if (validPercentages.length === 0) { return; } // Exit if no valid data
-                 const average = validPercentages.reduce((sum, val) => sum + val, 0) / validPercentages.length;
-                 let roundedAverage;
-                 const allSteps = gradeBands.flatMap(band => band.ranges.map(r => parseFloat(r.replace('%',''))));
-                 allSteps.sort((a, b) => a - b);
-                 const minStep = allSteps[0], maxStep = allSteps[allSteps.length - 1];
-                 const clampedAverage = Math.max(minStep, Math.min(average, maxStep));
-                 roundedAverage = allSteps.reduce((prev, curr) => (Math.abs(curr - clampedAverage) < Math.abs(prev - clampedAverage) ? curr : prev));
-                 if (!allSteps.includes(roundedAverage)) { roundedAverage = allSteps.reduce((prev, curr) => Math.abs(curr - clampedAverage) < Math.abs(prev - clampedAverage) ? curr : prev); }
-                 let gradeBandId = null, gradeBandTitle = '', letterGrade = '';
-                 for (const band of gradeBands) {
-                     const rangeNums = band.ranges.map(r => parseFloat(r.replace('%', '')));
-                     const minRange = Math.min(...rangeNums), maxRange = Math.max(...rangeNums), epsilon = 0.01;
-                     if (roundedAverage >= minRange - epsilon && roundedAverage <= maxRange + epsilon) {
-                         gradeBandId = band.id; gradeBandTitle = band.title; letterGrade = band.letterGrade; break;
-                     }
-                 }
-                 if (!gradeBandId) { gradeBandId = gradeBands[gradeBands.length - 1].id; gradeBandTitle = gradeBands[gradeBands.length - 1].title; letterGrade = gradeBands[gradeBands.length - 1].letterGrade; }
 
-                printWindow.document.write(`
+                const percentages = Object.values(performanceLevels).map(level => level && typeof level.percentage === 'string' ? parseFloat(level.percentage.replace('%', '')) : NaN);
+                const validPercentages = percentages.filter(p => !isNaN(p));
+                if (validPercentages.length === 0) { alert("Cannot print summary with invalid performance levels."); return; } // Added check
+                const average = validPercentages.reduce((sum, val) => sum + val, 0) / validPercentages.length;
+                let roundedAverage;
+                const allSteps = gradeBands.flatMap(band => band.ranges.map(r => parseFloat(r.replace('%','')))).sort((a, b) => a - b);
+                const minStep = allSteps[0], maxStep = allSteps[allSteps.length - 1];
+                const clampedAverage = Math.max(minStep, Math.min(average, maxStep));
+                roundedAverage = allSteps.reduce((prev, curr) => (Math.abs(curr - clampedAverage) < Math.abs(prev - clampedAverage) ? curr : prev));
+                if (!allSteps.includes(roundedAverage)) { roundedAverage = allSteps.reduce((prev, curr) => Math.abs(curr - clampedAverage) < Math.abs(prev - clampedAverage) ? curr : prev); }
+                let gradeBandId = null, gradeBandTitle = '', letterGrade = '';
+                for (const band of gradeBands) {
+                    const rangeNums = band.ranges.map(r => parseFloat(r.replace('%', ''))), minRange = Math.min(...rangeNums), maxRange = Math.max(...rangeNums), epsilon = 0.01;
+                    if (roundedAverage >= minRange - epsilon && roundedAverage <= maxRange + epsilon) {
+                        gradeBandId = band.id; gradeBandTitle = band.title; letterGrade = band.letterGrade; break;
+                    }
+                }
+                if (!gradeBandId) { gradeBandId = gradeBands[gradeBands.length - 1].id; gradeBandTitle = gradeBands[gradeBands.length - 1].title; letterGrade = gradeBands[gradeBands.length - 1].letterGrade; }
+
+                // Use template literals correctly for the entire HTML string
+                const printContent = `
                     <!DOCTYPE html>
                     <html><head><title>FN4004 Assessment Summary</title>
                         <style>
@@ -1634,25 +1447,26 @@
                         <div class="date">Date: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
                         <div class="summary-box"><h3>Overall Assessment</h3><div class="average-grade">${roundedAverage}% (${letterGrade} - ${gradeBandTitle})</div></div>
                         <h3>Learning Outcomes Assessment</h3>
-                        ${learningOutcomes.map(outcome => { // Start map
+                        ${learningOutcomes.map(outcome => {
                             const gradeInfo = performanceLevels[outcome.id];
                             const grade = gradeBands.find(g => g.id === gradeInfo?.bandId); 
                             const feedback = outcome.feedback[gradeInfo?.bandId]; 
-                            // *** CORRECTED: Removed leading backslash from return ***
+                            // Ensure no backslashes before the opening backtick of the returned string
                             return \`<div class="outcome"><h4>${outcome.title}</h4>
                                 <div class="grade-band">Grade: ${grade?.title || 'N/A'} (${gradeInfo?.percentage || 'N/A'})</div>
                                 <p><strong>Strengths Evidenced in Your Work:</strong> ${feedback?.strength || 'N/A'}</p>
                                 <p><strong>Areas for Reflection and Practice:</strong> ${feedback?.evidence || 'N/A'}</p>
-                                <p><strong>Summary:</strong> ${feedback?.improvement || 'N/A'}</p></div>\`; // End return string
+                                <p><strong>Summary:</strong> ${feedback?.improvement || 'N/A'}</p></div>\`;
                         }).join('')} 
                         <h3>Key Areas for Overall Improvement</h3>
-                         {* CORRECTED: Removed leading backslash from map li return *}
                         <ul>${(overallImprovements[gradeBandId] || []).map(advice => \`<li>${advice}</li>\`).join('') || '<li>N/A</li>'}</ul> 
                         <div class="footer"><p>This assessment summary is for reference only and not an official grade.</p>
                         <p>Kingston School of Art - BA (Hons) Fashion Program – FN4004 Design Process 1</p>
                         <p>© ${new Date().getFullYear()} Kingston University</p></div>
                     </body></html>
-                `); // End document.write
+                `;
+
+                printWindow.document.write(printContent); // Write the correctly formed string
                 printWindow.document.close();
                  setTimeout(() => {
                      try { printWindow.focus(); printWindow.print(); } 
