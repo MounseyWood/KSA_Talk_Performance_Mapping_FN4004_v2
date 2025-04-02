@@ -331,7 +331,10 @@
         /* Performance Chart */
         #performance-chart {
             margin: 0 auto;
-            max-width: 400px;
+            max-width: 500px;
+            max-height: 500px;
+            width: 100%;
+            height: auto;
         }
         
         /* Modal styles */
@@ -468,8 +471,20 @@
                         <!-- Performance Chart -->
                         <div class="bg-white p-4 rounded-md shadow-md mb-6" style="background-color: white; padding: 16px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; text-align: center;">
                             <h2 class="text-xl font-bold mb-4 text-center">Your Performance Profile</h2>
-                            <div style="display: flex; justify-content: center;">
+                            <div style="display: flex; justify-content: center; margin-bottom: 20px;">
                                 <canvas id="performance-chart" width="400" height="400"></canvas>
+                            </div>
+                            <!-- Legend for Learning Outcomes -->
+                            <div class="chart-legend" style="max-width: 400px; margin: 0 auto; text-align: left; font-size: 0.85rem;">
+                                <div style="font-weight: bold; margin-bottom: 8px;">Learning Outcomes:</div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                    <div><strong>LO1:</strong> Research for Creative Design</div>
+                                    <div><strong>LO2:</strong> Design Development Process</div>
+                                    <div><strong>LO3:</strong> Material Understanding</div>
+                                    <div><strong>LO4:</strong> Historical & Ethical Research</div>
+                                    <div><strong>LO5:</strong> Design Communication</div>
+                                    <div><strong>LO6:</strong> Personal & Professional Development</div>
+                                </div>
                             </div>
                         </div>
                         
@@ -915,7 +930,7 @@
                 },
                 {
                     id: 'outcome6',
-                    title: 'Personal & Professional Development',
+                    title: 'LO6: Personal & Professional Development',
                     description: 'Demonstrate effective planning, time-management, commitment & subject engagement, including the ability to work independently and collaboratively.',
                     framework: 'Personal and Professional Development',
                     feedback: {
@@ -1328,7 +1343,7 @@
                 
                 const centerX = performanceChart.width / 2;
                 const centerY = performanceChart.height / 2;
-                const radius = Math.min(centerX, centerY) - 30;
+                const radius = Math.min(centerX, centerY) - 40;
                 
                 // Draw axes
                 const numAxes = learningOutcomes.length;
@@ -1346,12 +1361,13 @@
                     ctx.strokeStyle = i === gradeLevels ? '#333' : '#ddd';
                     ctx.stroke();
                     
-                    // Label the grade level
+                    // Label the grade level - only on the top
                     if (i < gradeLevels) {
                         const grade = gradeBands[gradeLevels - i - 1];
                         ctx.fillStyle = '#666';
                         ctx.font = '10px Arial';
-                        ctx.fillText(grade.title.split(' ')[0], centerX + 5, centerY - levelRadius - 5);
+                        ctx.textAlign = 'center';
+                        ctx.fillText(grade.title.split(' ')[0], centerX, centerY - levelRadius - 5);
                     }
                 }
                 
@@ -1367,18 +1383,17 @@
                     ctx.strokeStyle = '#aaa';
                     ctx.stroke();
                     
-                    // Label the axis
+                    // Label the axis with just the LO number
                     const labelX = centerX + (radius + 20) * Math.cos(angle);
                     const labelY = centerY + (radius + 20) * Math.sin(angle);
                     
                     ctx.fillStyle = '#333';
-                    ctx.font = '12px Arial';
+                    ctx.font = 'bold 12px Arial';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     
-                    // Adjust label position for better readability
-                    const outcome = learningOutcomes[i].title.split(':')[0];
-                    ctx.fillText(outcome, labelX, labelY);
+                    // Just use LO1, LO2, etc.
+                    ctx.fillText(`LO${i+1}`, labelX, labelY);
                 }
                 
                 // Plot data points
