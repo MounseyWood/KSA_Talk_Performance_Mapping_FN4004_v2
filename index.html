@@ -470,11 +470,8 @@
                             <h2 class="text-xl font-bold mb-2 text-center">Indicative Average Grade</h2>
                             <p class="text-sm text-gray-500 mb-3 text-center" style="font-size: 0.875rem; color: #6b7280; margin-bottom: 12px; text-align: center;">Note: This is for reference only and not an official grade calculation.</p>
                             <div id="average-grade-display" class="flex items-center justify-center gap-4 p-4 rounded-md first" style="display: flex; align-items: center; justify-content: center; gap: 16px; padding: 16px; border-radius: 2px; background-color: #BFFF80;">
-                                <div class="text-center">
-                                    <div id="letter-grade" class="text-4xl font-bold" style="font-size: 2.25rem; font-weight: 700;">A</div>
-                                    <div id="grade-title" class="text-sm" style="font-size: 0.875rem;">First Class</div>
-                                </div>
-                                <div id="numeric-grade" class="text-5xl font-bold" style="font-size: 3rem; font-weight: 700;">75%</div>
+                                <div id="grade-title" class="text-xl font-bold" style="font-size: 1.25rem; font-weight: 700;">Upper Second (2:1)</div>
+                                <div id="numeric-grade" class="text-5xl font-bold" style="font-size: 3rem; font-weight: 700;">68%</div>
                             </div>
                         </div>
                     </div>
@@ -572,13 +569,13 @@
                         <thead>
                             <tr>
                                 <th>Learning Outcomes</th>
-                                <th class="first-plus">Distinction (A+)<br>85-100%</th>
-                                <th class="first">First Class (A)<br>70-84%</th>
-                                <th class="upper-second">Upper Second (B)<br>60-69%</th>
-                                <th class="lower-second">Lower Second (C)<br>50-59%</th>
-                                <th class="third">Third Class (D)<br>40-49%</th>
-                                <th class="marginal-fail">Marginal Fail (FM)<br>35-39%</th>
-                                <th class="fail">Fail (F)<br>0-34%</th>
+                                <th class="first-plus">Distinction<br>85-100%</th>
+                                <th class="first">First Class<br>70-84%</th>
+                                <th class="upper-second">Upper Second (2:1)<br>60-69%</th>
+                                <th class="lower-second">Lower Second (2:2)<br>50-59%</th>
+                                <th class="third">Third Class<br>40-49%</th>
+                                <th class="marginal-fail">Marginal Fail<br>35-39%</th>
+                                <th class="fail">Fail<br>0-34%</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1120,7 +1117,6 @@
             const outcomeContainer = document.getElementById('outcomes-container');
             const performanceChart = document.getElementById('performance-chart');
             const gradeDisplay = document.getElementById('average-grade-display');
-            const letterGrade = document.getElementById('letter-grade');
             const gradeTitle = document.getElementById('grade-title');
             const numericGrade = document.getElementById('numeric-grade');
             const keyImprovements = document.getElementById('key-improvements');
@@ -1473,7 +1469,7 @@
                     gradeDisplay.classList.add(gradeBand.id);
                     gradeDisplay.style.backgroundColor = gradeBand.color;
                     
-                    letterGrade.textContent = gradeBand.letterGrade;
+                    // Update with only title and percentage (no letter grade)
                     gradeTitle.textContent = gradeBand.title;
                     numericGrade.textContent = `${roundedAverage}%`;
                 }
@@ -1517,7 +1513,6 @@
                                 >
                                     ${grade.title}
                                 </span>
-                                <span style="font-size: 0.875rem; font-weight: bold;">${gradeInfo.percentage}</span>
                             </div>
                         </div>
                         
@@ -1740,12 +1735,12 @@
                             else if (average % 10 <= 9) roundedAverage = Math.floor(average / 10) * 10 + 8;
                             else roundedAverage = Math.ceil(average / 10) * 10;
                             
-                            // Find letter grade
-                            let letterGrade = '';
+                            // Find band title
+                            let bandTitle = '';
                             for (const band of gradeBands) {
                                 // Special handling for first-plus
                                 if (band.id === 'first-plus' && roundedAverage >= 85) {
-                                    letterGrade = band.letterGrade;
+                                    bandTitle = band.title;
                                     break;
                                 } 
                                 // For other bands
@@ -1755,14 +1750,14 @@
                                         const min = parseInt(rangeText[0]);
                                         const max = parseInt(rangeText[1]);
                                         if (roundedAverage >= min && roundedAverage <= max) {
-                                            letterGrade = band.letterGrade;
+                                            bandTitle = band.title;
                                             break;
                                         }
                                     }
                                 }
                             }
                             
-                            tableHtml += `${roundedAverage}% (${letterGrade})</td>`;
+                            tableHtml += `${roundedAverage}% (${bandTitle})</td>`;
                             
                             // Add outcome grades
                             for (const outcome of learningOutcomes) {
@@ -1784,7 +1779,7 @@
                                     <tr>
                                         <td>${profile.date}</td>
                                         <td style="text-align: center;">
-                                            ${profile.averageGrade.numericValue}% (${profile.averageGrade.letterGrade})
+                                            ${profile.averageGrade.numericValue}% (${profile.averageGrade.bandTitle})
                                         </td>
                                 `;
                                 
@@ -1920,14 +1915,12 @@
                 // Find grade band
                 let gradeBandId = null;
                 let gradeBandTitle = '';
-                let letterGrade = '';
                 
                 for (const band of gradeBands) {
                     // Special handling for first-plus
                     if (band.id === 'first-plus' && roundedAverage >= 85) {
                         gradeBandId = band.id;
                         gradeBandTitle = band.title;
-                        letterGrade = band.letterGrade;
                         break;
                     } 
                     // For other bands
@@ -1939,7 +1932,6 @@
                             if (roundedAverage >= min && roundedAverage <= max) {
                                 gradeBandId = band.id;
                                 gradeBandTitle = band.title;
-                                letterGrade = band.letterGrade;
                                 break;
                             }
                         }
@@ -2010,7 +2002,7 @@
                         <div class="summary-box">
                             <h3>Overall Assessment</h3>
                             <div class="average-grade">
-                                ${roundedAverage}% (${letterGrade} - ${gradeBandTitle})
+                                ${roundedAverage}% - ${gradeBandTitle}
                             </div>
                         </div>
                         
@@ -2025,7 +2017,7 @@
                                 <div class="outcome">
                                     <h4>${outcome.title}</h4>
                                     <p>${outcome.description}</p>
-                                    <div class="grade-band">Grade: ${grade.title} (${gradeInfo.percentage})</div>
+                                    <div class="grade-band">Grade: ${grade.title}</div>
                                     <p><strong>Strengths:</strong> ${feedback.strength}</p>
                                     <p><strong>Evidence:</strong> ${feedback.evidence}</p>
                                     <p><strong>For improvement:</strong> ${feedback.improvement}</p>
