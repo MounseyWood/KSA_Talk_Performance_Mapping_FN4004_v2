@@ -218,6 +218,7 @@
         .section-title {
             font-weight: 700;
             color: #000;
+            margin-bottom: 4px;
         }
         
         .framework-field {
@@ -247,21 +248,22 @@
             display: flex;
             flex-wrap: wrap;
             gap: 3px;
-            margin-bottom: 16px;
+            margin-bottom: 5px;
             justify-content: center;
         }
         
         .grade-band-container {
-            margin-bottom: 15px;
+            margin-bottom: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            padding: 8px;
+            padding: 5px;
         }
         
         .grade-band-title {
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 2px;
             text-align: center;
+            font-size: 0.9rem;
         }
         
         .action-buttons {
@@ -456,9 +458,11 @@
                     <!-- Right column - Results -->
                     <div>
                         <!-- Performance Chart -->
-                        <div class="bg-white p-4 rounded-md shadow-md mb-6" style="background-color: white; padding: 16px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px;">
+                        <div class="bg-white p-4 rounded-md shadow-md mb-6" style="background-color: white; padding: 16px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; text-align: center;">
                             <h2 class="text-xl font-bold mb-4 text-center">Your Performance Profile</h2>
-                            <canvas id="performance-chart" width="400" height="400"></canvas>
+                            <div style="display: flex; justify-content: center;">
+                                <canvas id="performance-chart" width="400" height="400"></canvas>
+                            </div>
                         </div>
                         
                         <!-- Indicative average grade -->
@@ -1195,13 +1199,15 @@
                 
                 learningOutcomes.forEach(outcome => {
                     const outcomeElement = document.createElement('div');
-                    outcomeElement.className = 'mb-6';
-                    outcomeElement.style.marginBottom = '30px';
+                    outcomeElement.className = 'mb-4';
+                    outcomeElement.style.marginBottom = '20px';
                     
                     const gradeBandHtml = gradeBands.map(band => {
                         const isActive = performanceLevels[outcome.id].bandId === band.id;
                         const optionsHtml = band.options.map(option => {
                             const isOptionActive = isActive && performanceLevels[outcome.id].percentage === option.value;
+                            // Extract just High, Mid, Low from the label
+                            const simplifiedLabel = option.label.split('(')[0].trim();
                             return `
                                 <button 
                                     class="grade-option-btn ${isOptionActive ? 'active' : ''}" 
@@ -1209,7 +1215,7 @@
                                     data-outcome-id="${outcome.id}"
                                     data-percentage="${option.value}"
                                 >
-                                    ${option.label}
+                                    ${simplifiedLabel}
                                 </button>
                             `;
                         }).join('');
@@ -1225,12 +1231,12 @@
                     }).join('');
                     
                     const html = `
-                        <h3 class="font-bold text-gray-800" style="font-weight: bold; color: #333;">${outcome.title}</h3>
-                        <p class="text-sm text-gray-600 mb-2" style="font-size: 0.875rem; color: #555; margin-bottom: 8px;">${outcome.description}</p>
-                        <p class="text-xs text-blue-600 mb-3" style="font-size: 0.75rem; color: #3b82f6; margin-bottom: 12px;">Framework: ${outcome.framework}</p>
+                        <h3 class="font-bold text-gray-800" style="font-weight: bold; color: #333; font-size: 0.95rem; margin-bottom: 4px;">${outcome.title}</h3>
+                        <p class="text-sm text-gray-600 mb-2" style="font-size: 0.85rem; color: #555; margin-bottom: 5px;">${outcome.description}</p>
+                        <p class="text-xs text-blue-600 mb-3" style="font-size: 0.75rem; color: #3b82f6; margin-bottom: 8px;">School of Design Framework Mapping: <strong>${outcome.framework}</strong></p>
                         
                         <div class="mb-3">
-                            <label class="text-sm font-semibold block mb-1" style="font-size: 0.875rem; font-weight: 600; display: block; margin-bottom: 4px;">Select Your Grade:</label>
+                            <label class="text-sm font-semibold block mb-1" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 2px;">Select Your Grade:</label>
                             ${gradeBandHtml}
                         </div>
                     `;
@@ -1517,13 +1523,16 @@
                         
                         <div style="font-size: 0.875rem;">
                             <div style="margin-bottom: 8px;">
-                                <strong>Strengths:</strong> ${feedback.strength}
+                                <p class="section-title">Strengths Evidenced in Your Work:</p>
+                                <p>${feedback.strength}</p>
                             </div>
                             <div style="margin-bottom: 8px;">
-                                <strong>Evidence:</strong> ${feedback.evidence}
+                                <p class="section-title">Areas for Reflection and Practice:</p>
+                                <p>${feedback.evidence}</p>
                             </div>
                             <div>
-                                <strong>For improvement:</strong> ${feedback.improvement}
+                                <p class="section-title">Summary:</p>
+                                <p>${feedback.improvement}</p>
                             </div>
                         </div>
                     `;
