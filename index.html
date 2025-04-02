@@ -244,19 +244,28 @@
             margin-bottom: 16px;
         }
         
+        .grade-band-container {
+            margin: 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 5px;
+            display: inline-block;
+            width: auto;
+        }
+        
         .grade-options-container {
             display: flex;
             flex-wrap: wrap;
             gap: 3px;
-            margin-bottom: 5px;
             justify-content: center;
         }
         
-        .grade-band-container {
-            margin-bottom: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 5px;
+        .grade-bands-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 10px;
+            justify-content: flex-start;
         }
         
         .grade-band-title {
@@ -1197,33 +1206,37 @@
                     outcomeElement.className = 'mb-4';
                     outcomeElement.style.marginBottom = '20px';
                     
-                    const gradeBandHtml = gradeBands.map(band => {
-                        const isActive = performanceLevels[outcome.id].bandId === band.id;
-                        const optionsHtml = band.options.map(option => {
-                            const isOptionActive = isActive && performanceLevels[outcome.id].percentage === option.value;
-                            // Extract just High, Mid, Low from the label
-                            const simplifiedLabel = option.label.split('(')[0].trim();
-                            return `
-                                <button 
-                                    class="grade-option-btn ${isOptionActive ? 'active' : ''}" 
-                                    data-band-id="${band.id}" 
-                                    data-outcome-id="${outcome.id}"
-                                    data-percentage="${option.value}"
-                                >
-                                    ${simplifiedLabel}
-                                </button>
-                            `;
-                        }).join('');
-                        
-                        return `
-                            <div class="grade-band-container ${isActive ? band.id : ''}" style="background-color: ${isActive ? band.color : '#f9f9f9'};">
-                                <div class="grade-band-title">${band.title}</div>
-                                <div class="grade-options-container">
-                                    ${optionsHtml}
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
+                    const gradeBandHtml = `
+                        <div class="grade-bands-wrapper">
+                            ${gradeBands.map(band => {
+                                const isActive = performanceLevels[outcome.id].bandId === band.id;
+                                const optionsHtml = band.options.map(option => {
+                                    const isOptionActive = isActive && performanceLevels[outcome.id].percentage === option.value;
+                                    // Extract just High, Mid, Low from the label
+                                    const simplifiedLabel = option.label.split('(')[0].trim();
+                                    return `
+                                        <button 
+                                            class="grade-option-btn ${isOptionActive ? 'active' : ''}" 
+                                            data-band-id="${band.id}" 
+                                            data-outcome-id="${outcome.id}"
+                                            data-percentage="${option.value}"
+                                        >
+                                            ${simplifiedLabel}
+                                        </button>
+                                    `;
+                                }).join('');
+                                
+                                return `
+                                    <div class="grade-band-container ${isActive ? band.id : ''}" style="background-color: ${isActive ? band.color : '#f9f9f9'};">
+                                        <div class="grade-band-title">${band.title}</div>
+                                        <div class="grade-options-container">
+                                            ${optionsHtml}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
                     
                     const html = `
                         <h3 class="font-bold text-gray-800" style="font-weight: bold; color: #333; font-size: 0.95rem; margin-bottom: 4px;">${outcome.title}</h3>
